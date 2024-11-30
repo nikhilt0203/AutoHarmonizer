@@ -2,8 +2,8 @@
 #include "DiatonicHarmonizer.h"
 #include "AtonalHarmonizer.h"
 
-constexpr MAX_LENGTH = 100;
-constexpr DIATONIC = 0, ATONAL = 1;
+const int MAX_LENGTH = 100;
+const int DIATONIC = 0, ATONAL = 1;
 
 Note melody[MAX_LENGTH];
 
@@ -114,14 +114,14 @@ void playMelody() {
 
     harmonizer->chordOff();  //placed here so that the previous chord will sustain into the next
     usbMIDI.sendNoteOn(curNote.note, 127, 1);
-    if(!harmonizer->isOn()) displayNoteLeds(curNote, true);
+    if (!harmonizer->isOn()) displayNoteLeds(curNote, true);
 
     if (harmonizer->isOn()) {
-       //send chord every 2 notes if note length <250ms, every 4 notes if <100ms
-      if(length < 250 && i != noteCount - 1) {
+      //send chord every 2 notes if note length <250ms, every 4 notes if <100ms
+      if (length < 250 && i != noteCount - 1) {
         chordFrequency = length < 100 ? 4 : 2;
         if (i % chordFrequency == 0) harmonizer->chordOn(curNote);
-      //otherwise send chord for every note
+        //otherwise send chord for every note
       } else {
         harmonizer->chordOn(curNote);
       }
@@ -140,7 +140,7 @@ void playMelody() {
     }
 
     usbMIDI.sendNoteOff(curNote.note, 0, 1);
-    if(!harmonizer->isOn()) displayNoteLeds(curNote, false);
+    if (!harmonizer->isOn()) displayNoteLeds(curNote, false);
 
     //To prevent delay after last note
     if (i == noteCount - 1) {
@@ -153,14 +153,14 @@ void playMelody() {
 
   isPlaying = false;
   allowButtonInput = true;
-  updateCurrentMenu();
+  //updateCurrentMenu();
 }
 
 bool playbackInterrupt() {
   //Check if playback should be stopped
   //digitalRead play button directly to bypass allowButtonInput,
   //return true if 500ms elapsed between first and second press (stop playback)
-  if (isPlaying && digitalRead(30) && millis() - playbackStartTime > 500) 
+  if (isPlaying && digitalRead(30) && millis() - playbackStartTime > 500)
     return true;
   return false;
 }
