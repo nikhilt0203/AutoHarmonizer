@@ -1,20 +1,20 @@
-#include "Note.h"
 #include "Harmonizer.h"
 
 Harmonizer::Harmonizer(int midiChannel)
-  : midiChannel(midiChannel), active(false) {
+  : midiChannel(midiChannel) {
+  isActive = false;
 }
 
 void Harmonizer::on() {
-  active = true;
+  isActive = true;
 }
 
 void Harmonizer::off() {
-  active = false;
+  isActive = false;
 }
 
 bool Harmonizer::isOn() {
-  return active;
+  return isActive;
 }
 
 void Harmonizer::setChannel(int newChannel) {

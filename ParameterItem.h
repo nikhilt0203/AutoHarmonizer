@@ -1,14 +1,31 @@
 #pragma once
-#include <Arduino.h>
 #include "MenuItem.h"
 
 class ParameterItem : public MenuItem {
 private:
-  int low, high;
+  int min;  //min of the parameter
+  int max;  //max of the parameter
 public:
-  ParameterItem(String displayName, int parentMenuNum, int low, int high);
-  void next();
-  void previous();
-  void setOption(int option);
-  String itemType();
+  ParameterItem(String _displayName, int min, int max, void (*f)(int))  //subitem controlling a single parameter
+    : MenuItem(_displayName, *f), min(min), max(max) {
+    type = ItemType::Parameter;
+  }
+
+  void next() {
+    currentIndex++;
+    if (currentIndex > max) currentIndex = max;
+    select();
+  }
+
+  void previous() {
+    currentIndex--;
+    if (currentIndex < min) currentIndex = min;
+    select();
+  }
+
+  void setOption(int option) {
+    if (option <= max && option >= min) currentIndex = option;
+    select();
+    return;
+  }
 };

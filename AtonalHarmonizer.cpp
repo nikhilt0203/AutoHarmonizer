@@ -3,6 +3,37 @@
 AtonalHarmonizer::AtonalHarmonizer(int midiChannel)
   : Harmonizer(midiChannel) {}
 
+void AtonalHarmonizer::chordOn(Note note) {
+  if (!isActive) return;
+  generateChord(note);
+  for (int i = 0; i < 4; i++) {
+    delay(10);
+    if (i > 0 && currentChord[i - 1] == currentChord[i]) continue;  //don't play duplicate notes
+    usbMIDI.sendNoteOn(currentChord[i], 127, midiChannel);
+  }
+}
+
+void AtonalHarmonizer::chordOff() {
+  if (!isActive) return;
+  for (int i = 0; i < 4; i++) {
+    usbMIDI.sendNoteOff(currentChord[i], 0, midiChannel);
+  }
+}
+
+String AtonalHarmonizer::chordToString() {
+  //so that notes print in ascending order
+  std::sort(currentChord, currentChord + 4);
+
+  const char* noteNames[12] = { "C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B" };
+  String chord;
+  for (int i = 0; i < 4; i++) {
+    if (i > 0 && currentChord[i - 1] == currentChord[i]) continue;
+    chord += noteNames[currentChord[i] % 12];
+    chord += " ";
+  }
+  return chord;
+}
+
 void AtonalHarmonizer::generateChord(Note note) {
   currentChord[0] = note.note;
   chordLength = 1;
@@ -22,14 +53,14 @@ void AtonalHarmonizer::generateChord(Note note) {
   std::sort(previousChord + 1, previousChord + 4);
 
   //re-generate chord if min2 in bass
-  if (abs(currentChord[1] - currentChord[2]) == 1) {
+  if (abs(currentChord[0] - currentChord[1]) == 1) {
     generateChord(note);
     return;
   }
 
   //Skip if previousChord hasn't been initialized yet
   if (previousChord[0] != -1) {
-    //re-generate chord if a voice leaps by more than 7 semitones
+    //re-generate chord if a voice leaps by more than 5 semitones
     for (int i = 1; i < 4; i++) {
       if (abs(currentChord[i] - previousChord[i]) > 7) {
         generateChord(note);
@@ -50,14 +81,14 @@ bool AtonalHarmonizer::verifyNextNote(int newNote) {
       - max 1 minor 2nds
       - max 1 tritone
       - max 2 major 2nds
-      - max 2 major 7ths
+      - max 1 major 7th
     */
   int minSeconds = 0;
   int majSeconds = 0;
   int majSevenths = 0;
   int tritones = 0;
 
-  for (int i = 0; i < chordLength - 1; i++) {
+  for (int i = 0; i < chordLength; i++) {
     int interval = abs(currentChord[i] - newNote);
     if (interval == 13) return false;
     if (interval == 11) majSevenths++;
@@ -69,37 +100,6 @@ bool AtonalHarmonizer::verifyNextNote(int newNote) {
   if (minSeconds > 1) return false;
   if (majSeconds > 2) return false;
   if (tritones > 1) return false;
-  if (majSevenths > 2) return false;
+  if (majSevenths > 1) return false;
   return true;
-}
-
-void AtonalHarmonizer::chordOn(Note note) {
-  if (!active) return;
-  generateChord(note);
-  for (int i = 0; i < 4; i++) {
-    delay(10);
-    if (i > 0 && currentChord[i - 1] == currentChord[i]) continue;  //don't play duplicate notes
-    usbMIDI.sendNoteOn(currentChord[i], 127, midiChannel);
-  }
-}
-
-void AtonalHarmonizer::chordOff() {
-  if (!active) return;
-  for (int i = 0; i < 4; i++) {
-    usbMIDI.sendNoteOff(currentChord[i], 0, midiChannel);
-  }
-}
-
-String AtonalHarmonizer::chordToString() {
-  //so that notes print in ascending order
-  std::sort(currentChord, currentChord + 4);
-
-  const char* noteNames[12] = { "C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B" };
-  String chord;
-  for (int i = 0; i < 4; i++) {
-    if (i > 0 && currentChord[i - 1] == currentChord[i]) continue;
-    chord += noteNames[currentChord[i] % 12];
-    chord += " ";
-  }
-  return chord;
 }

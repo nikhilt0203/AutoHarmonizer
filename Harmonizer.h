@@ -1,20 +1,23 @@
 #pragma once
 #include <Arduino.h>
+#include <vector>
 #include "Note.h"
 
-//Base class for harmonizers
 class Harmonizer {
 protected:
   int midiChannel;                            //MIDI channel to send chords to
-  bool active;                                //if harmonizer is currently on
-  int currentChord[4];                        //indices 0-2 MIDI note #s, index 3 scale degree of chord
-  virtual void generateChord(Note note) = 0;  //for generating a new chord
+  bool isActive = false;                      //if harmonizer is currently on
+  int currentChord[4];                        //the current chord of the harmonizer, represented with MIDI note #s
+  virtual void generateChord(Note note) = 0;  //populates currentChord[] with MIDI note #s based on a given Note
+
 public:
-  Harmonizer(int midiChannel);              //constructor
-  virtual void on();                        //turn on harmonizer
-  virtual void off();                       //turn off harmonizer
-  virtual bool isOn();                      //if harmonizer is currently on
-  virtual void setChannel(int newChannel);  //set MIDI channel of harmonizer
-  virtual int* getCurrentChord();           //return currentChord[]
-  virtual void chordOn(Note note) = 0;      //send a chord via MIDI on based on a given Note
-  virtual void chordOff() = 0;              //turn off current chor
+  Harmonizer(int midiChannel);
+  virtual void on();                        //puts harmonizer in active mode
+  virtual void off();                       //puts harmonizer in inactive mode
+  virtual bool isOn();                      //returns whether or not harmonizer is active
+  virtual void setChannel(int newChannel);  //changes the MIDI channel
+  virtual int* getCurrentChord();           //returns the currentChord array
+  virtual void chordOn(Note note) = 0;      //sends currentChord notes via MIDI
+  virtual void chordOff() = 0;              //turns off currentChord notes via MIDI
+  virtual String chordToString() = 0;       //returns a string representation of the current chord
+};

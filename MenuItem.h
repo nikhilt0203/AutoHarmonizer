@@ -1,42 +1,51 @@
 #pragma once
 #include <Arduino.h>
+#include <variant>
 #include <vector>
 
 class MenuItem {
-protected:
-  String displayName;
-  int itemNum;
-  int parentNum;
-  std::vector<const char*> menuOptions;
-  std::vector<MenuItem*> subItems;
-  int numOptions = 0;
-  int currentIndex, selectedIndex = 0;
-  void (*pressCallback)(int) = nullptr;
 public:
   //vector containing all created items
-  static std::vector<MenuItem*> menu;
-  //"default" constructor
-  MenuItem(String displayName, int parentNum);
-  //item containing options
-  MenuItem(String displayName, int parentNum, const std::vector<const char*>& menuOptions);
-  //item containing other items
-  MenuItem(String displayName, int parentNum, const std::vector<MenuItem*>& subItems);
+  static std::vector<MenuItem*> allItems;
 
-  MenuItem* getCurrentItem();                      //return the current item (if item contains other subitems)
-  std::vector<MenuItem*> getSubItems();            //return the vector of subitems
-  virtual void next();                             //go to next option, or item
-  virtual void previous();                         //go to previous option, or item
-  virtual void select();                           //select current option and execute its callback function
-  virtual int nextOptionIndex();                   //get index of next option
-  virtual int previousOptionIndex();               //get index of previous option
-  virtual int currentOptionIndex();                //get index of current option
-  virtual int getNumOptions();                     //get item's total number of options
-  virtual String name();                           //get item's displayName
-  virtual String currentOptionName();              //get name of current option, or item
-  virtual void onPress(void (*f)(int));            //set item's callback function
-  virtual void setOption(int option);              //set item's current option
-  virtual void changeDisplayName(String newName);  //change item's displayName
-  virtual int getNum();                            //get item's #
-  virtual int getParentNum();                      //get the # of the item's parent item
-  virtual String itemType();
+  enum class ItemType {
+    Options,
+    SubItems,
+    Parameter,
+    OnOff
+  };
+
+protected:
+  String displayName;                    //the item's display name
+  std::vector<const char*> menuOptions;  //vector containing options
+  std::vector<MenuItem*> subItems;       //vector containing other items
+  int numOptions = 0;                    //total number of options the item has
+  int currentIndex = 0;                  //index of the current option
+  int selectedIndex = 0;                 //index of the selected option
+  int itemNum;                           //initialized to the index of the item in the allItems vector
+  int parentNum;                         //the itemNum of the parent item, if this item is a subitem
+  void (*clickCallback)(int) = nullptr;  //callback executed when an option is chosen
+  ItemType type;                         //the type of the item
+
+public:
+  MenuItem(String _displayName, void (*onClick)(int));
+  MenuItem(String _displayName, const std::vector<const char*>& _menuOptions, void (*onClick)(int));
+  MenuItem(String _displayName, const std::vector<MenuItem*>& _subItems, void (*onClick)(int));
+  std::vector<MenuItem*> getSubItems();
+  virtual void next();
+  virtual void previous();
+  virtual void select();
+  virtual void setOption(int option);
+  void setParentNum(int _parentNum);
+  void setDisplayName(String newName);
+  int nextOptionIndex();
+  int previousOptionIndex();
+  int currentOptionIndex();
+  int getNumOptions();
+  int getItemNum() const;
+  int getParentNum();
+  String name();
+  String currentOptionName();
+  String selectedOptionName();
+  ItemType itemType();
 };

@@ -1,7 +1,118 @@
+#include <vector>
+#include <algorithm>
 #include "DiatonicHarmonizer.h"
 
 DiatonicHarmonizer::DiatonicHarmonizer(int key, bool minor, int midiChannel)
   : Harmonizer(midiChannel), key(key), minor(minor) {}
+
+void DiatonicHarmonizer::chordOn(Note note) {
+  if (!isActive) return;
+  generateChord(note);
+
+  for (int i = 0; i < 3; i++) {
+    delay(10);
+    usbMIDI.sendNoteOn(currentChord[i], 127, midiChannel);
+  }
+}
+
+void DiatonicHarmonizer::chordOff() {
+  if (!isActive) return;
+
+  for (int i = 0; i < 3; i++) {
+    usbMIDI.sendNoteOff(currentChord[i], 0, midiChannel);
+  }
+}
+
+void DiatonicHarmonizer::toMinor() {
+  minor = true;
+}
+
+void DiatonicHarmonizer::toMajor() {
+  minor = false;
+}
+
+bool DiatonicHarmonizer::isMinor() {
+  return minor;
+}
+
+int DiatonicHarmonizer::getKey() {
+  return key;
+}
+
+void DiatonicHarmonizer::setKey(int newKey) {
+  if (newKey >= 0 && newKey <= 11) {
+    key = newKey;
+  }
+}
+
+void DiatonicHarmonizer::setOctave(int newOctave) {
+  if (newOctave >= -4 && newOctave <= 4) range = newOctave;
+}
+
+String DiatonicHarmonizer::chordToString() {
+  static const char* sharpNoteNames[12] = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
+  static const char* flatNoteNames[12] = { "C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B" };
+
+  int interval = (currentChord[0] - key + 12) % 12;  //num half steps above key
+  String chord, quality;
+
+  //MAJOR KEYS
+  if (!minor) {
+    //flat keys (Eb, F, Ab, Bb)
+    if (key == 3 || key == 5 || key == 8 || key == 10) {
+      chord = flatNoteNames[(key + interval) % 12];
+    } else {
+      //sharp keys ((C), C#, D, E, F#, G, A, B)
+      chord = sharpNoteNames[(key + interval) % 12];
+    }
+  }
+
+  //MINOR KEYS
+  //if raised 7th needs to be handled (keys C#m, Ebm, F#m, Gm)
+  if (minor && interval == 11 && (key == 1 || key == 2 || key == 6 || key == 7)) {
+    switch (key) {
+      case 1: chord = "Bx"; break;  //for key C#m
+      case 2: chord = "C#"; break;  //for key Ebm
+      case 6: chord = "Ex"; break;  //for key F#m
+      case 7: chord = "F#"; break;  //for key Gm
+    }
+    //all other minor keys
+  } else if (minor) {
+    //sharp keys (C#m, Em, F#m, (Am), Bm)
+    if (key == 1 || key == 4 || key == 6 || key == 9 || key == 11) {
+      chord = sharpNoteNames[(key + interval) % 12];
+      //flat keys (Cm, Dm, Ebm, Fm, Gm, Abm, Bbm)
+    } else {
+      chord = flatNoteNames[(key + interval) % 12];
+    }
+  }
+
+  //get quality of chord from mode and scale degree stored in currentChord[3]
+  switch (currentChord[3]) {
+    case 1:
+      quality = minor ? "m" : "";
+      break;
+    case 2:
+      quality = minor ? "dim" : "m";
+      break;
+    case 3:
+      quality = minor ? "+" : "m";
+      break;
+    case 4:
+      quality = minor ? "m" : "";
+      break;
+    case 5:
+      quality = "";
+      break;
+    case 6:
+      quality = minor ? "" : "m";
+      break;
+    case 7:
+      quality = "dim";
+      break;
+  }
+  return chord + quality;
+}
 
 void DiatonicHarmonizer::generateChord(Note note) {
   int midiNote = note.note;
@@ -59,7 +170,6 @@ int DiatonicHarmonizer::selectChord(Note note) {
   return selectedChordIndex;
 }
 
-//Converts a scale degree into the # of semitones above the tonic (0)
 int DiatonicHarmonizer::scaleDegreeToSemitones(int scaleDegree) {
   switch (scaleDegree) {
     case 1: return 0;              //do
@@ -91,113 +201,4 @@ int DiatonicHarmonizer::findScaleDegree(int midiNote) {
     case 11: return 7;
     default: return 0;
   }
-}
-
-void DiatonicHarmonizer::chordOn(Note note) {
-  if (!active) return;
-
-  generateChord(note);
-  for (int i = 0; i < 3; i++) {
-    delay(10);
-    usbMIDI.sendNoteOn(currentChord[i], 127, midiChannel);
-  }
-}
-
-void DiatonicHarmonizer::chordOff() {
-  if (!active) return;
-
-  for (int i = 0; i < 3; i++) {
-    usbMIDI.sendNoteOff(currentChord[i], 0, midiChannel);
-  }
-}
-
-void DiatonicHarmonizer::toMinor() {
-  minor = true;
-}
-
-void DiatonicHarmonizer::toMajor() {
-  minor = false;
-}
-
-bool DiatonicHarmonizer::isMinor() {
-  return minor;
-}
-
-int DiatonicHarmonizer::getKey() {
-  return key;
-}
-
-void DiatonicHarmonizer::setKey(int newKey) {
-  if (newKey >= 0 && newKey <= 11) {
-    key = newKey;
-  }
-}
-
-void DiatonicHarmonizer::setOctave(int newOctave) {
-  if (newOctave >= -4 && newOctave <= 4) range = newOctave;
-}
-
-String DiatonicHarmonizer::chordToString() {
-  const char* sharpNoteNames[12] = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
-  const char* flatNoteNames[12] = { "C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B" };
-
-  int interval = (currentChord[0] - key + 12) % 12;  //num half steps above key
-  String chord, quality;
-
-  //MAJOR KEYS
-  if (!minor) {
-    //flat keys (Eb, F, Ab, Bb)
-    if (key == 3 || key == 5 || key == 8 || key == 10) {
-      chord = flatNoteNames[(key + interval) % 12];
-      //sharp keys ((C), C#, D, E, F#, G, A, B)
-    } else {
-      chord = sharpNoteNames[(key + interval) % 12];
-    }
-  }
-
-  //MINOR KEYS
-  //if raised 7th needs to be handled (keys C#m, Ebm, F#m, Gm)
-  if (minor && (key == 1 || key == 2 || key == 6 || key == 7) && interval == 11) {
-    switch (key) {
-      case 1: chord = "Bx"; break;  //C#m
-      case 2: chord = "C#"; break;  //Ebm
-      case 6: chord = "Ex"; break;  //F#m
-      case 7: chord = "F#"; break;  //Gm
-    }
-    //all other minor keys
-  } else if (minor) {
-    //sharp keys (C#m, Em, F#m, (Am), Bm)
-    if (key == 1 || key == 4 || key == 6 || key == 9 || key == 11) {
-      chord = sharpNoteNames[(key + interval) % 12];
-      //flat keys (Cm, Dm, Ebm, Fm, Gm, Abm, Bbm)
-    } else {
-      chord = flatNoteNames[(key + interval) % 12];
-    }
-  }
-
-  //get quality of chord from scale degree + mode
-  switch (currentChord[3]) {
-    case 1:
-      quality = minor ? "m" : "";
-      break;
-    case 2:
-      quality = minor ? "dim" : "m";
-      break;
-    case 3:
-      quality = minor ? "+" : "m";
-      break;
-    case 4:
-      quality = minor ? "m" : "";
-      break;
-    case 5:
-      quality = "";
-      break;
-    case 6:
-      quality = minor ? "" : "m";
-      break;
-    case 7:
-      quality = "dim";
-      break;
-  }
-  return chord + quality;
 }

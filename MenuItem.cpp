@@ -1,27 +1,28 @@
 #include "MenuItem.h"
 
-std::vector<MenuItem*> MenuItem::menu;
+//initialize static vectors containing all created MenuItems
+std::vector<MenuItem*> MenuItem::allItems = {};
 
-MenuItem::MenuItem(String displayName, int parentNum)
-  : displayName(displayName), parentNum(parentNum) {
-  menu.push_back(this);
-  itemNum = menu.size() - 1;
+MenuItem::MenuItem(String _displayName, void (*onClick)(int))
+  : displayName(_displayName), clickCallback(onClick) {
+  allItems.push_back(this);       //add newly created item to static vector allItem
+  itemNum = allItems.size() - 1;  //set the itemNum based on the item's index in allItems vector
 }
 
-MenuItem::MenuItem(String displayName, int parentNum, const std::vector<const char*>& menuOptions)
-  : MenuItem::MenuItem(displayName, parentNum) {
-  this->menuOptions = menuOptions;
-  numOptions = menuOptions.size();
+MenuItem::MenuItem(String _displayName, const std::vector<const char*>& _menuOptions, void (*onClick)(int))  //item containing options
+  : MenuItem(_displayName, onClick) {
+  numOptions = _menuOptions.size();
+  menuOptions = _menuOptions;
 }
 
-MenuItem::MenuItem(String displayName, int parentNum, const std::vector<MenuItem*>& subItems)
-  : MenuItem(displayName, parentNum) {
-  numOptions = subItems.size();
-  this->subItems = subItems;
-}
-
-MenuItem* MenuItem::getCurrentItem() {
-  return subItems[currentIndex];
+MenuItem::MenuItem(String _displayName, const std::vector<MenuItem*>& _subItems, void (*onClick)(int))  //item containing other subitems
+  : MenuItem(_displayName, onClick) {
+  numOptions = _subItems.size();
+  subItems = _subItems;
+  //set the parentNum of this item's subitems to the itemNum of this item
+  for (MenuItem* item : subItems) {
+    item->setParentNum(this->itemNum);
+  }
 }
 
 std::vector<MenuItem*> MenuItem::getSubItems() {
@@ -34,6 +35,23 @@ void MenuItem::next() {
 
 void MenuItem::previous() {
   currentIndex = (currentIndex - 1 + numOptions) % numOptions;
+}
+
+void MenuItem::select() {
+  selectedIndex = currentIndex;
+  if (clickCallback != nullptr) clickCallback(currentIndex);
+}
+
+void MenuItem::setOption(int option) {
+  if (option >= 0 && option < numOptions) currentIndex = option;
+}
+
+void MenuItem::setParentNum(int _parentNum) {
+  parentNum = _parentNum;
+}
+
+void MenuItem::setDisplayName(String newName) {
+  displayName = newName;
 }
 
 int MenuItem::nextOptionIndex() {
@@ -50,6 +68,18 @@ int MenuItem::currentOptionIndex() {
   return currentIndex;
 }
 
+int MenuItem::getNumOptions() {
+  return numOptions;
+}
+
+int MenuItem::getItemNum() const {
+  return itemNum;
+}
+
+int MenuItem::getParentNum() {
+  return parentNum;
+}
+
 String MenuItem::name() {
   return displayName;
 }
@@ -59,36 +89,11 @@ String MenuItem::currentOptionName() {
   return subItems[currentIndex]->name();
 }
 
-int MenuItem::getNumOptions() {
-  return numOptions;
+String MenuItem::selectedOptionName() {
+  if (subItems.empty()) return menuOptions[selectedIndex];
+  return subItems[selectedIndex]->name();
 }
 
-void MenuItem::select() {
-  selectedIndex = currentIndex;
-  if (pressCallback != nullptr) pressCallback(currentIndex);
-}
-
-void MenuItem::onPress(void (*f)(int)) {
-  pressCallback = f;
-}
-
-void MenuItem::setOption(int option) {
-  if (option >= 0 && option < numOptions) currentIndex = option;
-}
-
-void MenuItem::changeDisplayName(String newName) {
-  displayName = newName;
-}
-
-int MenuItem::getNum() {
-  return itemNum;
-}
-
-int MenuItem::getParentNum() {
-  return parentNum;
-}
-
-String MenuItem::itemType() {
-  if (subItems.empty()) return "options";
-  return "subitems";
+MenuItem::ItemType MenuItem::itemType() {
+  return type;
 }
