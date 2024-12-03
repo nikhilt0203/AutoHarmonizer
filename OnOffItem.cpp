@@ -1,24 +1,18 @@
+#pragma once
 #include "OnOffItem.h"
 
-OnOffItem::OnOffItem(String initialState, int parentNum)
-  : MenuItem(initialState, parentNum) {
-  numOptions = 2;
+OnOffItem::OnOffItem(bool initialState, void (*f)(int))
+  : MenuItem(initialState ? "ON" : "OFF", *f) {
+  type = ItemType::OnOff;
 }
 
-String OnOffItem::currentOptionName() {
-  return displayName;
-}
-
-String OnOffItem::itemType() {
-  return "onoff";
-}
-
-void OnOffItem::select()  {
+void OnOffItem::select() override {
   if (displayName.equals("OFF")) {
-    changeDisplayName("ON");
-    if (pressCallback != nullptr) pressCallback(1);
+    setDisplayName("ON");
+    clickCallback(1);
   } else {
-    changeDisplayName("OFF");
-    if (pressCallback != nullptr) pressCallback(0);
+    setDisplayName("OFF");
+    clickCallback(0);
   }
+  return;
 }
