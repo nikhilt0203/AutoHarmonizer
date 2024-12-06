@@ -3,7 +3,7 @@
 #include "ParameterItem.h"
 #include "OnOffItem.h"
 
-// Item objects
+//MenuItem object declarations
 extern MenuItem keyItem;
 extern MenuItem modeItem;
 extern MenuItem colorSchemeItem;
@@ -15,15 +15,40 @@ extern MenuItem harmonizerMenu;
 extern MenuItem ledMenu;
 extern MenuItem mainMenu;
 
-//Menu functions
+/**
+ * @brief begin the menu
+ */
 void menuSetup();
-void updateCurrentMenu();
-void previousMenu();
+
+/**
+ * @brief update the menu with the current information.
+ */
+void updateCurrentMenu();         
+
+/**
+ * @brief return to the previous menu.
+ */
+void previousMenu();                
+
+/**
+ * @brief select the current item. Called when encoder button is pressed.
+ */
 void encoderPress(int _buttonNum);
+
+/**
+ * @brief proceed to next item. Called when encoder is clicked left.
+ */
 void clickLeft();
+
+/**
+ * @brief return to previous item. Called when encoder is clicked right.
+ */
 void clickRight();
 
-//Item actions
+/**
+ * @brief MenuItem callback functions. Called when the given item is selected.
+ * @param optionIndex the index of the item's current option
+ */
 void mainMenuAction(int optionIndex);
 void harmonizerMenuAction(int optionIndex);
 void keyItemAction(int optionIndex);

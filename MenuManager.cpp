@@ -1,18 +1,20 @@
 #include "MenuManager.h"
 #include "MenuItem.h"
+#include "Keyboard.h"
 #include "DisplayManager.h"
 #include "LEDManager.h"
+#include "MelodyRecorder.h"
 
 //Items containing an array of options
 static std::vector<const char*> keyOptions = { "C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B" };
 static std::vector<const char*> modeOptions = { "Major", "Minor", "Atonal" };
-static std::vector<const char*> colorSchemeOptions = { "Ice", "Mint", "Rose", "Alloy", "Rainbow" };
+static std::vector<const char*> colorSchemeOptions = { "Chromatic", "Ice", "Rose", "Mint", "Alloy" };
 
 MenuItem keyItem("Key", keyOptions, keyItemAction);
 MenuItem modeItem("Mode", modeOptions, modeItemAction);
 MenuItem colorSchemeItem("Color Scheme", colorSchemeOptions, colorSchemeItemAction);
 
-//Items that can be on/off
+//Items that are on or off
 OnOffItem harmonizerOnOffItem(true, harmonizerOnOffItemAction);
 
 //Items containing a single parameter
@@ -34,9 +36,7 @@ int currentMenu;
 
 void menuSetup() {
   currentMenu = mainMenu.getItemNum();
-  while (currentMenu != mainMenu.getItemNum()) {
-    updateCurrentMenu();
-  }
+  updateCurrentMenu();
 }
 
 void updateCurrentMenu() {

@@ -1,16 +1,9 @@
 #pragma once
 #include <Adafruit_NeoPixel.h>
-#include "ButtonManager.h"
-#include "MenuManager.h"
 #include "Note.h"
-#include "MelodyRecorder.h"
 
 extern Adafruit_NeoPixel indicatorLed;
 extern Adafruit_NeoPixel keypadLeds;
-
-enum class State;
-
-void ledManager(State state);
 
 void ledSetup();
 

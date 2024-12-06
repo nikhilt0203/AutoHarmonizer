@@ -1,19 +1,18 @@
 #include "LEDManager.h"
 #include <Adafruit_NeoPixel.h>
 #include "ButtonManager.h"
+#include "Keyboard.h"
 #include "MenuManager.h"
 #include "MelodyRecorder.h"
-
-IntervalTimer ledUpdate;
 
 const int indicatorLedPin = 24;
 const int keypadLedsPin = 15;
 
 Adafruit_NeoPixel indicatorLed = Adafruit_NeoPixel(1, indicatorLedPin, NEO_RGB);
 Adafruit_NeoPixel keypadLeds = Adafruit_NeoPixel(16, keypadLedsPin, NEO_GRB);
+IntervalTimer ledUpdate;
 
 uint32_t RECORD_COLOR, PLAY_COLOR, PLAY_HARMONIZER_COLOR, NOTE_COLOR, TONIC_COLOR, DIATONIC_COLOR, NON_DIATONIC_COLOR;
-
 String currentScheme;
 
 int keypadLedValues[16];
@@ -59,12 +58,9 @@ void ledSetup() {
   keypadLeds.begin();
   keypadLeds.clear();
   keypadLeds.show();
-  int r, g, b;
+
   for (int i = 0; i < 16; i++) {
-    r = rainbow[i][0];
-    g = rainbow[i][1];
-    b = rainbow[i][2];
-    keypadLeds.setPixelColor(i, keypadLeds.Color(r, g, b));
+    keypadLeds.setPixelColor(i, keypadLeds.Color(rainbow[i][0],  rainbow[i][1],  rainbow[i][2]));
     keypadLeds.show();
     delay(75);
   }
@@ -73,8 +69,9 @@ void ledSetup() {
     keypadLeds.show();
     delay(75);
   }
+  
   ledUpdate.begin(updateLeds, 10000);
-  changeColorScheme("Ice");  //default scheme
+  changeColorScheme("Chromatic");  //default scheme
 }
 
 void updateLeds() {
@@ -98,6 +95,17 @@ void updateLeds() {
   }
   if (diatonicHarmonizer.getKey() != currentKey || litUpKey == -1) {
     updateKeypadLeds();  //update key LEDs if key has changed
+  }
+}
+
+void updateChromaticScheme() {
+  if (!diatonicHarmonizer.isMinor()) {
+    DIATONIC_COLOR = keypadLeds.Color(colors[currentKey][0], colors[currentKey][1], colors[currentKey][2]);
+    TONIC_COLOR = keypadLeds.Color(colors[(currentKey + 1) % 12][0], colors[(currentKey + 1) % 12][1], colors[(currentKey + 1) % 12][2]);
+  } else {
+    int minorIndex = (currentKey + 3 + 12) % 12;
+    DIATONIC_COLOR = keypadLeds.Color(colors[minorIndex][0], colors[minorIndex][1], colors[minorIndex][2]);
+    TONIC_COLOR = keypadLeds.Color(colors[(minorIndex + 1) % 12][0], colors[(minorIndex + 1) % 12][1], colors[(minorIndex + 1) % 12][2]);
   }
 }
 
@@ -136,8 +144,8 @@ void updateKeypadLeds() {
       keypadLeds.setPixelColor(indexToLedNum(i), 0, 0, 0);
       continue;
     }
-    if (currentScheme.equals("Rainbow")) {
-      updateRainbowColors();
+    if (currentScheme.equals("Chromatic")) {
+      updateChromaticScheme();
     }
     if (keypadLedValues[i] == 1) {
       keypadLeds.setPixelColor(indexToLedNum(i), TONIC_COLOR);
@@ -153,14 +161,14 @@ void updateKeypadLeds() {
 void changeColorScheme(String newScheme) {
   currentScheme = newScheme;
 
-  if (currentScheme.equals("Rainbow")) {
+  if (currentScheme.equals("Chromatic")) {
     brightnessItemAction(2);
     RECORD_COLOR = indicatorLed.Color(255, 0, 0);
     PLAY_COLOR = indicatorLed.Color(0, 255, 0);
     PLAY_HARMONIZER_COLOR = indicatorLed.Color(0, 0, 255);
     NON_DIATONIC_COLOR = keypadLeds.Color(0, 0, 0);
     NOTE_COLOR = keypadLeds.Color(50, 50, 50);
-    updateRainbowColors();  //set DIATONIC_COLOR and TONIC_COLOR dependent on key
+    updateChromaticScheme();  //set DIATONIC_COLOR and TONIC_COLOR dependent on key
   } else if (currentScheme.equals("Mint")) {
     brightnessItemAction(1);
     RECORD_COLOR = indicatorLed.Color(128, 0, 0);
@@ -168,7 +176,7 @@ void changeColorScheme(String newScheme) {
     PLAY_HARMONIZER_COLOR = indicatorLed.Color(0, 255, 128);
     NOTE_COLOR = keypadLeds.Color(64, 128, 64);
     DIATONIC_COLOR = keypadLeds.Color(192, 255, 128);
-    NON_DIATONIC_COLOR = keypadLeds.Color(25, 57, 25);
+    NON_DIATONIC_COLOR = keypadLeds.Color(12, 27, 12);
     NOTE_COLOR = keypadLeds.Color(64, 128, 64);
     TONIC_COLOR = keypadLeds.Color(160, 250, 160);
   } else if (currentScheme.equals("Alloy")) {
@@ -177,8 +185,8 @@ void changeColorScheme(String newScheme) {
     PLAY_COLOR = indicatorLed.Color(255, 215, 0);
     PLAY_HARMONIZER_COLOR = indicatorLed.Color(255, 140, 0);
     NOTE_COLOR = keypadLeds.Color(155, 128, 81);
-    DIATONIC_COLOR = keypadLeds.Color(150, 69, 19);
-    NON_DIATONIC_COLOR = keypadLeds.Color(255, 165, 79);
+    DIATONIC_COLOR = keypadLeds.Color(255, 165, 79);
+    NON_DIATONIC_COLOR = keypadLeds.Color(150, 69, 19);
     TONIC_COLOR = keypadLeds.Color(220, 100, 50);
   } else if (currentScheme.equals("Rose")) {
     brightnessItemAction(0);
@@ -198,17 +206,6 @@ void changeColorScheme(String newScheme) {
     DIATONIC_COLOR = keypadLeds.Color(0, 255, 255);
     NON_DIATONIC_COLOR = keypadLeds.Color(0, 0, 50);
     TONIC_COLOR = keypadLeds.Color(100, 225, 255);
-  }
-}
-
-void updateRainbowColors() {
-  if (!diatonicHarmonizer.isMinor()) {
-    DIATONIC_COLOR = keypadLeds.Color(colors[currentKey][0], colors[currentKey][1], colors[currentKey][2]);
-    TONIC_COLOR = keypadLeds.Color(colors[(currentKey + 1) % 12][0], colors[(currentKey + 1) % 12][1], colors[(currentKey + 1) % 12][2]);
-  } else {
-    int minorIndex = (currentKey + 3 + 12) % 12;
-    DIATONIC_COLOR = keypadLeds.Color(colors[minorIndex][0], colors[minorIndex][1], colors[minorIndex][2]);
-    TONIC_COLOR = keypadLeds.Color(colors[(minorIndex + 1) % 12][0], colors[(minorIndex + 1) % 12][1], colors[(minorIndex + 1) % 12][2]);
   }
 }
 

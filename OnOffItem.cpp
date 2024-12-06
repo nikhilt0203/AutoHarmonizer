@@ -1,4 +1,3 @@
-#pragma once
 #include "OnOffItem.h"
 
 OnOffItem::OnOffItem(bool initialState, void (*f)(int))
@@ -6,7 +5,7 @@ OnOffItem::OnOffItem(bool initialState, void (*f)(int))
   type = ItemType::OnOff;
 }
 
-void OnOffItem::select() override {
+void OnOffItem::select() {
   if (displayName.equals("OFF")) {
     setDisplayName("ON");
     clickCallback(1);

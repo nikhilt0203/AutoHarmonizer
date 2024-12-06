@@ -76,18 +76,8 @@ void AtonalHarmonizer::generateChord(Note note) {
 }
 
 bool AtonalHarmonizer::verifyNextNote(int newNote) {
-  /*conditions: 
-      - no minor 9ths
-      - max 1 minor 2nds
-      - max 1 tritone
-      - max 2 major 2nds
-      - max 1 major 7th
-    */
-  int minSeconds = 0;
-  int majSeconds = 0;
-  int majSevenths = 0;
-  int tritones = 0;
-
+  int minSeconds = 0, majSeconds = 0, majSevenths = 0, tritones = 0;
+  
   for (int i = 0; i < chordLength; i++) {
     int interval = abs(currentChord[i] - newNote);
     if (interval == 13) return false;
@@ -96,7 +86,13 @@ bool AtonalHarmonizer::verifyNextNote(int newNote) {
     if (interval == 2) majSeconds++;
     if (interval == 1) minSeconds++;
   }
-
+  /*conditions: 
+      - no minor 9ths
+      - max 1 minor 2nds
+      - max 1 tritone
+      - max 2 major 2nds
+      - max 1 major 7th
+    */
   if (minSeconds > 1) return false;
   if (majSeconds > 2) return false;
   if (tritones > 1) return false;

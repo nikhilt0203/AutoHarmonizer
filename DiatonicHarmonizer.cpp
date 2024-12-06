@@ -1,6 +1,6 @@
 #include <vector>
-#include <algorithm>
 #include "DiatonicHarmonizer.h"
+#include "DisplayManager.h"
 
 DiatonicHarmonizer::DiatonicHarmonizer(int key, bool minor, int midiChannel)
   : Harmonizer(midiChannel), key(key), minor(minor) {}

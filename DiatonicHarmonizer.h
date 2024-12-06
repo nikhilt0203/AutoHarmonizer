@@ -47,7 +47,7 @@ private:
   int selectChord(Note note);                   //returns the index of the selected chord in possibleChords[]
   int scaleDegreeToSemitones(int scaleDegree);  //converts scale degree into # of semitones above the tonic
   int findScaleDegree(int midiNote);            //finds the scale degree of a given MIDI note based on the key
-  
+
 public:
   DiatonicHarmonizer(int key, bool minor, int midiChannel);
   void chordOn(Note note) override;  //sends currentChord notes via MIDI
@@ -58,5 +58,5 @@ public:
   int getKey();                      //returns the current key
   void setKey(int newKey);           //sets the key of the harmonizer, 0 <= newKey <= 11
   void setOctave(int newOctave);     //sets the octave of the harmonizer, -4 <= newOctave <= 4
-  String chordToString() override;   //returns a string representation of the current chord
+  String chordToString() override;  //returns a string representation of the current chord
 };
