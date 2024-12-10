@@ -1,0 +1,278 @@
+#include <vector>
+#include "DiatonicHarmonizer.h"
+#include "DisplayManager.h"
+
+/* Possible chord for each scale degree. first array contains all triads that contain DO, 
+ * second array contains all triads that contain RE..
+ */
+int possibleChords[7][3] = {
+    { 1, 4, 6 },
+    { 2, 5, 7 },
+    { 1, 3, 6 },
+    { 2, 4, 7 },
+    { 1, 3, 5 },
+    { 2, 4, 6 },
+    { 3, 5, 7 }
+  };
+
+/*
+ * Weights for each chord for each scale degree to determine chord selection,
+ *  corresponds with possibleChords[] above
+ */
+int chordWeights[7][3] = {
+  { 10, 8, 8 },
+  { 7, 10, 1 },
+  { 10, 1, 8 },
+  { 6, 10, 1 },
+  { 7, 1, 10 },
+  { 6, 8, 10 },
+  { 1, 10, 2 }
+};
+
+//The cale degrees contained in the 7 diatonic triads
+int scaleDegreesInChords[7][3] = {
+  { 1, 3, 5 },
+  { 2, 4, 6 },
+  { 3, 5, 7 },
+  { 4, 6, 1 },
+  { 5, 7, 2 },
+  { 6, 1, 3 },
+  { 7, 2, 4 },
+};
+
+DiatonicHarmonizer::DiatonicHarmonizer(int key, bool minor, int midiChannel)
+  : Harmonizer(midiChannel), key(key), minor(minor) {}
+
+void DiatonicHarmonizer::chordOn(Note note) 
+{
+  if (!isActive) return;
+  generateChord(note);
+
+  for (int i = 0; i < 3; i++) 
+  {
+    delay(10);
+    usbMIDI.sendNoteOn(currentChord[i], 127, midiChannel);
+  }
+}
+
+void DiatonicHarmonizer::chordOff() 
+{
+  if (!isActive) return;
+
+  for (int i = 0; i < 3; i++) 
+  {
+    usbMIDI.sendNoteOff(currentChord[i], 0, midiChannel);
+  }
+}
+
+void DiatonicHarmonizer::toMinor() 
+{
+  minor = true;
+}
+
+void DiatonicHarmonizer::toMajor() 
+{
+  minor = false;
+}
+
+bool DiatonicHarmonizer::isMinor() 
+{
+  return minor;
+}
+
+int DiatonicHarmonizer::getKey()
+{
+  return key;
+}
+
+void DiatonicHarmonizer::setKey(int newKey) 
+{
+  if (newKey >= 0 && newKey <= 11) 
+  {
+    key = newKey;
+  }
+}
+
+void DiatonicHarmonizer::setOctave(int newOctave) 
+{
+  if (newOctave >= -4 && newOctave <= 4) range = newOctave;
+}
+
+String DiatonicHarmonizer::chordToString() {
+  static const char* sharpNoteNames[12] = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
+  static const char* flatNoteNames[12] = { "C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B" };
+
+  int interval = (currentChord[0] - key + 12) % 12;  //num half steps above key
+  String chord, quality;
+
+  //MAJOR KEYS
+  if (!minor) 
+  {
+    //flat keys (Eb, F, Ab, Bb)
+    if (key == 3 || key == 5 || key == 8 || key == 10) 
+    {
+      chord = flatNoteNames[(key + interval) % 12];
+    } 
+    else 
+    {
+      //sharp keys ((C), C#, D, E, F#, G, A, B)
+      chord = sharpNoteNames[(key + interval) % 12];
+    }
+  }
+
+  //MINOR KEYS
+  //if raised 7th needs to be handled (keys C#m, Ebm, F#m, Gm)
+  if (minor && interval == 11 && (key == 1 || key == 2 || key == 6 || key == 7)) 
+  {
+    switch (key) 
+    {
+      case 1: chord = "Bx"; break;  //for key C#m
+      case 2: chord = "C#"; break;  //for key Ebm
+      case 6: chord = "Ex"; break;  //for key F#m
+      case 7: chord = "F#"; break;  //for key Gm
+    }
+    //all other minor keys
+  } 
+  else if (minor) 
+  {
+    //sharp keys (C#m, Em, F#m, (Am), Bm)
+    if (key == 1 || key == 4 || key == 6 || key == 9 || key == 11) 
+    {
+      chord = sharpNoteNames[(key + interval) % 12];
+      //flat keys (Cm, Dm, Ebm, Fm, Gm, Abm, Bbm)
+    } 
+    else 
+    {
+      chord = flatNoteNames[(key + interval) % 12];
+    }
+  }
+
+  //get quality of chord from mode and scale degree stored in currentChord[3]
+  switch (currentChord[3]) 
+  {
+    case 1:
+      quality = minor ? "m" : "";
+      break;
+    case 2:
+      quality = minor ? "dim" : "m";
+      break;
+    case 3:
+      quality = minor ? "+" : "m";
+      break;
+    case 4:
+      quality = minor ? "m" : "";
+      break;
+    case 5:
+      quality = "";
+      break;
+    case 6:
+      quality = minor ? "" : "m";
+      break;
+    case 7:
+      quality = "dim";
+      break;
+  }
+  return chord + quality;
+}
+
+void DiatonicHarmonizer::generateChord(Note note) 
+{
+  int midiNote = note.note;
+  int chordScaleDegree = possibleChords[findScaleDegree(midiNote) - 1][selectChord(note)];
+  currentChord[3] = chordScaleDegree;
+  int octave;
+
+  for (int i = 0; i < 3; i++) 
+  {
+    //default voicing of the triad
+    if (i == 0) octave = 48;
+    if (i == 1) octave = 60;
+    if (i == 2) octave = 60;
+
+    currentChord[i] = scaleDegreeToSemitones(scaleDegreesInChords[chordScaleDegree - 1][i]) + key + octave + (range * 12);
+  }
+}
+
+int DiatonicHarmonizer::selectChord(Note note) 
+{
+  int index = findScaleDegree(note.note) - 1;
+
+  /* Bypass typical chord weights if it is the last note AND its scale degree is 1 or 3 
+        (5 not included to allow for half cadence)
+    */
+  if (note.next == nullptr && (index == 0 || index == 2)) 
+  {
+    switch (random(0, 10)) 
+    {
+      case 0:
+      case 1:
+      case 2:
+      case 3:
+      case 4:
+      case 5:
+      case 6:
+      case 7: return 0;  //80% I chord
+      case 8:
+      case 9: return 2;  //20% vi chord
+    }
+  }
+
+  //Find total weight of the three potential chords
+  int totalWeight = 0;
+  for (int i = 0; i < 3; i++) 
+  {
+    totalWeight += chordWeights[index][i];
+  }
+
+  //Randomly choose chord (index of chord array) based on weights
+  int randWeight = random(0, totalWeight + 1);
+  int sum = 0;
+  int selectedChordIndex = 0;
+  for (int i = 0; i < 3; i++) 
+  {
+    sum += chordWeights[index][i];
+    if (randWeight < sum) 
+    {
+      selectedChordIndex = i;
+      break;
+    }
+  }
+  return selectedChordIndex;
+}
+
+int DiatonicHarmonizer::scaleDegreeToSemitones(int scaleDegree) 
+{
+  switch (scaleDegree) 
+  {
+    case 1: return 0;              //do
+    case 2: return 2;              //re
+    case 3: return minor ? 3 : 4;  //mi or me
+    case 4: return 5;              //fa
+    case 5: return 7;              //sol
+    case 6: return minor ? 8 : 9;  //la or le
+    case 7: return 11;             //ti
+  }
+  return 0;
+}
+
+int DiatonicHarmonizer::findScaleDegree(int midiNote) 
+{
+  //map MIDI note 0-127 to chromatic scale 0-11
+  int note = midiNote % 12;
+  //find distance between the note and the key
+  int interval = (note - key + 12) % 12;
+
+  switch (interval) 
+  {
+    case 0: return 1;
+    case 2: return 2;
+    case 3: return 3;  //return scale degree 3 for both flat 3...
+    case 4: return 3;  //...and 3
+    case 5: return 4;
+    case 7: return 5;
+    case 8: return 6;  //return scale degree 6 for both flat 6...
+    case 9: return 6;  //...and 6
+    case 11: return 7;
+    default: return 0;
+  }
+}
